@@ -52,17 +52,21 @@ describe('InternalApiService', () => {
 
     beforeEach(() => {
       // 기본 모킹 설정
-      jest.spyOn(encryptionService, 'generateBlindIndex').mockReturnValue('mockBlindIndex');
-      jest.spyOn(encryptionService, 'decrypt').mockImplementation((encrypted) => {
-        const decryptMap: { [key: string]: string } = {
-          'encrypted:01012345678': '01012345678',
-          'encrypted:1234567890': '1234567890',
-          'encrypted:01087654321': '01087654321',
-          'encrypted:01011112222': '01011112222',
-          'encrypted:9876543210': '9876543210',
-        };
-        return decryptMap[encrypted] || encrypted;
-      });
+      jest
+        .spyOn(encryptionService, 'generateBlindIndex')
+        .mockReturnValue('mockBlindIndex');
+      jest
+        .spyOn(encryptionService, 'decrypt')
+        .mockImplementation((encrypted) => {
+          const decryptMap: { [key: string]: string } = {
+            'encrypted:01012345678': '01012345678',
+            'encrypted:1234567890': '1234567890',
+            'encrypted:01087654321': '01087654321',
+            'encrypted:01011112222': '01011112222',
+            'encrypted:9876543210': '9876543210',
+          };
+          return decryptMap[encrypted] || encrypted;
+        });
     });
 
     it('should normalize phone number and validate it', async () => {
@@ -78,7 +82,9 @@ describe('InternalApiService', () => {
       await service.getInquiries(phoneNumber, page, limit);
 
       // Then
-      expect(encryptionService.generateBlindIndex).toHaveBeenCalledWith('01012345678');
+      expect(encryptionService.generateBlindIndex).toHaveBeenCalledWith(
+        '01012345678',
+      );
     });
 
     it('should generate correct Blind Index for search', async () => {
@@ -93,7 +99,9 @@ describe('InternalApiService', () => {
       await service.getInquiries(phoneNumber);
 
       // Then
-      expect(encryptionService.generateBlindIndex).toHaveBeenCalledWith(expectedNormalized);
+      expect(encryptionService.generateBlindIndex).toHaveBeenCalledWith(
+        expectedNormalized,
+      );
     });
 
     it('should call repository with correct Blind Index and pagination', async () => {
@@ -115,7 +123,9 @@ describe('InternalApiService', () => {
         limit,
         expectedOffset,
       );
-      expect(inquiryRepository.countByBlindIndex).toHaveBeenCalledWith('mockBlindIndex');
+      expect(inquiryRepository.countByBlindIndex).toHaveBeenCalledWith(
+        'mockBlindIndex',
+      );
     });
 
     it('should decrypt inquiry data correctly', async () => {
@@ -123,7 +133,9 @@ describe('InternalApiService', () => {
       const phoneNumber = '01012345678';
       const mockInquiries = [mockInquiry];
 
-      jest.spyOn(inquiryRepository, 'findByBlindIndex').mockResolvedValue(mockInquiries);
+      jest
+        .spyOn(inquiryRepository, 'findByBlindIndex')
+        .mockResolvedValue(mockInquiries);
       jest.spyOn(inquiryRepository, 'countByBlindIndex').mockResolvedValue(1);
 
       // When
@@ -133,8 +145,12 @@ describe('InternalApiService', () => {
       expect(result.data).toHaveLength(1);
       expect(result.data[0]).toHaveProperty('phoneNumber', '01012345678');
       expect(result.data[0]).toHaveProperty('businessNumber', '1234567890');
-      expect(encryptionService.decrypt).toHaveBeenCalledWith('encrypted:01012345678');
-      expect(encryptionService.decrypt).toHaveBeenCalledWith('encrypted:1234567890');
+      expect(encryptionService.decrypt).toHaveBeenCalledWith(
+        'encrypted:01012345678',
+      );
+      expect(encryptionService.decrypt).toHaveBeenCalledWith(
+        'encrypted:1234567890',
+      );
     });
 
     it('should handle inquiries without business number', async () => {
@@ -145,7 +161,9 @@ describe('InternalApiService', () => {
         encryptedBusinessNumber: undefined,
       };
 
-      jest.spyOn(inquiryRepository, 'findByBlindIndex').mockResolvedValue([inquiryWithoutBusiness]);
+      jest
+        .spyOn(inquiryRepository, 'findByBlindIndex')
+        .mockResolvedValue([inquiryWithoutBusiness]);
       jest.spyOn(inquiryRepository, 'countByBlindIndex').mockResolvedValue(1);
 
       // When
@@ -164,8 +182,12 @@ describe('InternalApiService', () => {
       const limit = 20;
       const total = 45; // 3페이지 분량
 
-      jest.spyOn(inquiryRepository, 'findByBlindIndex').mockResolvedValue([mockInquiry]);
-      jest.spyOn(inquiryRepository, 'countByBlindIndex').mockResolvedValue(total);
+      jest
+        .spyOn(inquiryRepository, 'findByBlindIndex')
+        .mockResolvedValue([mockInquiry]);
+      jest
+        .spyOn(inquiryRepository, 'countByBlindIndex')
+        .mockResolvedValue(total);
 
       // When
       const result = await service.getInquiries(phoneNumber, page, limit);
@@ -187,7 +209,9 @@ describe('InternalApiService', () => {
       jest.spyOn(encryptionService, 'decrypt').mockImplementation(() => {
         throw new Error('Decryption failed');
       });
-      jest.spyOn(inquiryRepository, 'findByBlindIndex').mockResolvedValue([inquiryWithBadData]);
+      jest
+        .spyOn(inquiryRepository, 'findByBlindIndex')
+        .mockResolvedValue([inquiryWithBadData]);
       jest.spyOn(inquiryRepository, 'countByBlindIndex').mockResolvedValue(1);
 
       // When
@@ -196,7 +220,10 @@ describe('InternalApiService', () => {
       // Then
       expect(result.data).toHaveLength(1);
       expect(result.data[0]).not.toHaveProperty('phoneNumber'); // 복호화 실패로 속성 없음
-      expect(result.data[0]).toHaveProperty('encryptedPhoneNumber', 'corrupted-data'); // 원본 데이터 유지
+      expect(result.data[0]).toHaveProperty(
+        'encryptedPhoneNumber',
+        'corrupted-data',
+      ); // 원본 데이터 유지
     });
 
     it('should return empty result when no inquiries found', async () => {
@@ -235,7 +262,9 @@ describe('InternalApiService', () => {
         },
       ];
 
-      jest.spyOn(inquiryRepository, 'findByBlindIndex').mockResolvedValue(mockInquiries);
+      jest
+        .spyOn(inquiryRepository, 'findByBlindIndex')
+        .mockResolvedValue(mockInquiries);
       jest.spyOn(inquiryRepository, 'countByBlindIndex').mockResolvedValue(3);
 
       // When

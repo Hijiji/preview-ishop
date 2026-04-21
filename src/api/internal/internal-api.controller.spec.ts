@@ -48,13 +48,19 @@ describe('InternalApiController', () => {
         totalPages: 1,
       };
 
-      jest.spyOn(internalApiService, 'getInquiries').mockResolvedValue(mockResult);
+      jest
+        .spyOn(internalApiService, 'getInquiries')
+        .mockResolvedValue(mockResult);
 
       // When
       const result = await controller.getInquiries(phoneNumber, page, limit);
 
       // Then
-      expect(internalApiService.getInquiries).toHaveBeenCalledWith(phoneNumber, page, limit);
+      expect(internalApiService.getInquiries).toHaveBeenCalledWith(
+        phoneNumber,
+        page,
+        limit,
+      );
       expect(result).toEqual(mockResult);
     });
 
@@ -68,13 +74,19 @@ describe('InternalApiController', () => {
         totalPages: 0,
       };
 
-      jest.spyOn(internalApiService, 'getInquiries').mockResolvedValue(mockResult);
+      jest
+        .spyOn(internalApiService, 'getInquiries')
+        .mockResolvedValue(mockResult);
 
       // When
       await controller.getInquiries(phoneNumber);
 
       // Then
-      expect(internalApiService.getInquiries).toHaveBeenCalledWith(phoneNumber, 1, 20);
+      expect(internalApiService.getInquiries).toHaveBeenCalledWith(
+        phoneNumber,
+        1,
+        20,
+      );
     });
 
     it('should return decrypted data with proper pagination structure', async () => {
@@ -103,7 +115,9 @@ describe('InternalApiController', () => {
         totalPages: 3,
       };
 
-      jest.spyOn(internalApiService, 'getInquiries').mockResolvedValue(mockResult);
+      jest
+        .spyOn(internalApiService, 'getInquiries')
+        .mockResolvedValue(mockResult);
 
       // When
       const result = await controller.getInquiries(phoneNumber, page, limit);
@@ -129,7 +143,9 @@ describe('InternalApiController', () => {
         totalPages: 0,
       };
 
-      jest.spyOn(internalApiService, 'getInquiries').mockResolvedValue(mockResult);
+      jest
+        .spyOn(internalApiService, 'getInquiries')
+        .mockResolvedValue(mockResult);
 
       // When
       const result = await controller.getInquiries(phoneNumber);
@@ -153,13 +169,19 @@ describe('InternalApiController', () => {
         totalPages: 10,
       };
 
-      jest.spyOn(internalApiService, 'getInquiries').mockResolvedValue(mockResult);
+      jest
+        .spyOn(internalApiService, 'getInquiries')
+        .mockResolvedValue(mockResult);
 
       // When
       const result = await controller.getInquiries(phoneNumber, page, limit);
 
       // Then
-      expect(internalApiService.getInquiries).toHaveBeenCalledWith(phoneNumber, page, limit);
+      expect(internalApiService.getInquiries).toHaveBeenCalledWith(
+        phoneNumber,
+        page,
+        limit,
+      );
       expect(result.page).toBe(100);
       expect(result.totalPages).toBe(10);
       expect(result.data).toHaveLength(0); // 해당 페이지에 데이터가 없음
