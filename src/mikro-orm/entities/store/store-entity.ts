@@ -1,13 +1,12 @@
-import { Entity, PrimaryKey, Index } from '@mikro-orm/core';
-import { Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryKey, Property } from '@mikro-orm/core';
 
 @Entity({ tableName: 'store' })
 export class StoreEntity {
   @PrimaryKey({ name: 'id' })
   id?: number;
 
-  @Column({
-    name: 'store_name',
+  @Property({
+    fieldName: 'storeName',
     type: 'varchar',
     length: 100,
     comment: '사업장 이름',
@@ -15,9 +14,8 @@ export class StoreEntity {
   })
   storeName: string;
 
-  // 암호화된 사업자번호
-  @Column({
-    name: 'businessNumber',
+  @Property({
+    fieldName: 'businessNumber',
     type: 'varchar',
     length: 100,
     comment: '암호화된 사업자번호',
@@ -25,9 +23,8 @@ export class StoreEntity {
   })
   businessNumber: string;
 
-  // 암호화된 대표자 전화번호
-  @Column({
-    name: 'representativePhone',
+  @Property({
+    fieldName: 'representativePhone',
     type: 'varchar',
     length: 100,
     comment: '암호화된 대표자 전화번호',
@@ -35,8 +32,8 @@ export class StoreEntity {
   })
   representativePhone?: string;
 
-  @Column({
-    name: 'representativeName',
+  @Property({
+    fieldName: 'representativeName',
     type: 'varchar',
     length: 50,
     comment: '대표자 이름',
@@ -44,8 +41,8 @@ export class StoreEntity {
   })
   representativeName?: string;
 
-  @Column({
-    name: 'representativeEmail',
+  @Property({
+    fieldName: 'representativeEmail',
     type: 'varchar',
     length: 100,
     comment: '대표자 이메일',
@@ -53,8 +50,8 @@ export class StoreEntity {
   })
   representativeEmail?: string;
 
-  @Column({
-    name: 'storeAddress',
+  @Property({
+    fieldName: 'storeAddress',
     type: 'varchar',
     length: 200,
     comment: '사업장 주소',
@@ -62,17 +59,16 @@ export class StoreEntity {
   })
   storeAddress?: string;
 
-  // 배치 처리용 필드들
-  @Column({
-    name: 'lastCheckedAt',
+  @Property({
+    fieldName: 'lastCheckedAt',
     type: 'datetime',
     comment: '마지막 휴폐업 상태 확인 일시',
     nullable: true,
   })
   lastCheckedAt?: Date;
 
-  @Column({
-    name: 'businessStatus',
+  @Property({
+    fieldName: 'businessStatus',
     type: 'varchar',
     length: 10,
     comment: '사업자 상태 (API 응답 b_stt)',
@@ -80,8 +76,8 @@ export class StoreEntity {
   })
   businessStatus?: string;
 
-  @Column({
-    name: 'taxType',
+  @Property({
+    fieldName: 'taxType',
     type: 'varchar',
     length: 20,
     comment: '과세유형 (API 응답 tax_type)',
@@ -89,9 +85,17 @@ export class StoreEntity {
   })
   taxType?: string;
 
-  @CreateDateColumn({ name: 'created_at', comment: '생성일', nullable: false })
-  createdAt: Date;
+  @Property({
+    fieldName: 'created_at',
+    onCreate: () => new Date(),
+    comment: '생성일',
+  })
+  createdAt: Date = new Date();
 
-  @UpdateDateColumn({ name: 'updated_at', comment: '수정일', nullable: false })
-  updatedAt: Date;
+  @Property({
+    fieldName: 'updated_at',
+    onUpdate: () => new Date(), // 수정 시 자동 갱신
+    comment: '수정일',
+  })
+  updatedAt: Date = new Date();
 }
