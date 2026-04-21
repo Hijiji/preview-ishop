@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsEmpty,
   IsEnum,
+  IsPhoneNumber,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { IndustryType } from 'src/enums/industry-type.enum';
@@ -20,9 +21,7 @@ export class CreateInquiryDto {
   @ApiProperty({ description: '전화번호', example: '010-1234-5678' })
   @IsString()
   @IsNotEmpty()
-  @Matches(/^\d{3}-\d{4}-\d{4}$/, {
-    message: '올바른 전화번호 형식이 아닙니다.',
-  })
+  @IsPhoneNumber('KR', { message: '유효한 대한민국 전화번호가 아닙니다.' })
   phoneNumber: string;
 
   @ApiProperty({ description: '사업자번호', example: '123-45-67890' })
