@@ -32,12 +32,11 @@ export class PublicApiService {
 
   /**
    * 사용자 문의 등록
-   * - 개인정보 암호화
-   * - 유효한 전화번호를 판별하여 아닐경우 400 에러 반환
    * @param createInquiryDto
    * @returns
    */
   async createInquiry(createInquiryDto: CreateInquiryDto) {
+    // 전화번호에서 하이픈 제거 및 유효성 검사
     const plainPhone = this.normalizeNumber(createInquiryDto.phoneNumber);
     this.validatePhoneNumber(plainPhone);
 
@@ -45,6 +44,7 @@ export class PublicApiService {
     inquiryEntity.industry = createInquiryDto.industry;
     inquiryEntity.phoneNumber = this.encryptionService.encrypt(plainPhone);
 
+    // 사업자번호가 있는 경우 하이픈 제거 및 유효성 검사
     if (createInquiryDto.businessNumber) {
       const plainBusiness = this.normalizeNumber(
         createInquiryDto.businessNumber,
