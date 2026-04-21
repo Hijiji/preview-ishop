@@ -1,0 +1,11 @@
+.idea
+.DS_Store
+build
+dist
+esm
+yarn-error.log
+package-lock.json
+.vscode
+/node_modules
+.env
+*.sqlite3
