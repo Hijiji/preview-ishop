@@ -1,13 +1,14 @@
-import { Entity, PrimaryKey, Index } from '@mikro-orm/core';
+import { Entity, PrimaryKey, Index, Property } from '@mikro-orm/core'; // Property 추가
 import { IndustryType } from 'src/enums/industry-type.enum';
-import { Column, CreateDateColumn } from 'typeorm';
+// import { Column, CreateDateColumn } from 'typeorm'; // TypeORM 제거
 
 @Entity({ tableName: 'inquiry' })
+@Index({ properties: ['phoneFullHash'] })
 export class InquiryEntity {
   @PrimaryKey({ name: 'id' })
   id?: number;
 
-  @Column({
+  @Property({
     type: 'varchar',
     length: 30,
     comment: '업종',
@@ -15,8 +16,8 @@ export class InquiryEntity {
   })
   industry: IndustryType;
 
-  @Column({
-    name: 'encryptedPhoneNumber',
+  @Property({
+    fieldName: 'encryptedPhoneNumber',
     type: 'varchar',
     length: 100,
     comment: '암호화된 전화번호',
@@ -24,23 +25,25 @@ export class InquiryEntity {
   })
   encryptedPhoneNumber: string;
 
-  // Blind Index: 전체 번호 HMAC 해시 (정확한 일치 검색용)
-  @Index()
-  @Column({
-    name: 'phoneFullHash',
+  // Blind Index
+  @Property({
+    fieldName: 'phoneFullHash',
     type: 'varchar',
-    length: 64, // SHA256 hex
+    length: 64,
     comment: '전화번호 전체 Blind Index (HMAC-SHA256)',
     nullable: false,
   })
   phoneFullHash: string;
 
-  @CreateDateColumn({ name: 'createdAt', comment: '생성일', nullable: false })
-  createdAt: Date;
+  @Property({
+    fieldName: 'createdAt',
+    onCreate: () => new Date(),
+    comment: '생성일',
+  })
+  createdAt: Date = new Date();
 
-  // 암호화된 사업자번호
-  @Column({
-    name: 'encryptedBusinessNumber',
+  @Property({
+    fieldName: 'encryptedBusinessNumber',
     type: 'varchar',
     length: 100,
     comment: '암호화된 사업자번호',
