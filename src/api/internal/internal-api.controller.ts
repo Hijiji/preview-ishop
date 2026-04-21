@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { InternalApiService } from './internal-api.service';
 
@@ -11,5 +11,11 @@ export class InternalApiController {
   @Get('/inquiries')
   getInquiries() {
     return this.internalApiService.getInquiries({});
+  }
+
+  @ApiOperation({ summary: '전화번호로 구매 상담 조회 API' })
+  @Get('/inquiries/search')
+  getInquiriesByPhoneNumber(@Query('phoneNumber') phoneNumber: string) {
+    return this.internalApiService.getInquiriesByPhoneNumber(phoneNumber);
   }
 }
