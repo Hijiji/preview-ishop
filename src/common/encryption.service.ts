@@ -5,69 +5,115 @@ import * as crypto from 'crypto';
 @Injectable()
 export class EncryptionService {
   private readonly encryptionKey: string;
-  private readonly algorithm = 'aes-256-cbc';
-  private readonly ivLength = 16;
+  private readonly searchKey: string; // 검색용 HMAC 키 (암호화 키와 분리)
+  private readonly globalPepper: string; // 글로벌 페퍼: 레인보우 테이블 방어 + 검색 가능성 유지
+  private readonly algorithm: string;
+  private readonly ivLength: number;
+  private readonly scryptSalt: string;
+  private readonly hmacAlgorithm: string;
 
   constructor(private readonly configService: ConfigService) {
-    const key = this.configService.get<string>('ENCRYPTION_KEY');
-    if (!key) {
+    const encKey = this.configService.get<string>('ENCRYPTION_KEY');
+    const searchKey = this.configService.get<string>('SEARCH_SECRET_KEY');
+    const pepper = this.configService.get<string>('GLOBAL_PEPPER');
+    const algorithm = this.configService.get<string>(
+      'ENCRYPTION_ALGORITHM',
+      'aes-256-cbc',
+    );
+    const ivLength = this.configService.get<number>('ENCRYPTION_IV_LENGTH', 16);
+    const scryptSalt = this.configService.get<string>(
+      'ENCRYPTION_SCRYPT_SALT',
+      'salt',
+    );
+    const hmacAlgorithm = this.configService.get<string>(
+      'ENCRYPTION_HMAC_ALGORITHM',
+      'sha256',
+    );
+
+    if (!encKey || encKey.length !== 32) {
       throw new Error(
-        'CRITICAL: ENCRYPTION_KEY가 설정되지 않았습니다. 서버를 시작할 수 없습니다.',
+        'INVALID_ENCRYPTION_KEY: 암호화 키는 32바이트(hex)여야 합니다.',
       );
     }
-    if (key.length !== 32) {
+    if (!searchKey || searchKey.length < 32) {
       throw new Error(
-        `INVALID_KEY_LENGTH: 암호화 키는 정확히 32바이트(hex 기준 64자)여야 합니다. 현재: ${key.length}바이트`,
+        'INVALID_SEARCH_KEY: 검색 키는 최소 32바이트여야 합니다.',
       );
     }
-    this.encryptionKey = key;
+    if (!pepper || pepper.length < 16) {
+      throw new Error(
+        'INVALID_PEPPER: 글로벌 페퍼는 최소 16바이트여야 합니다.',
+      );
+    }
+
+    this.encryptionKey = encKey;
+    this.searchKey = searchKey;
+    this.globalPepper = pepper;
+    this.algorithm = algorithm;
+    this.ivLength = ivLength;
+    this.scryptSalt = scryptSalt;
+    this.hmacAlgorithm = hmacAlgorithm;
   }
 
   /**
-   * 평문을 암호화
+   * 평문을 AES-256-CBC로 암호화
    * @param plaintext
    * @returns
    */
   encrypt(plaintext: string): string {
-    // IV(초기화 벡터) 생성
     const iv = crypto.randomBytes(this.ivLength);
-
-    // IV를 이용해 cipher 생성
     const cipher = crypto.createCipheriv(
       this.algorithm,
-      crypto.scryptSync(this.encryptionKey, 'salt', 32),
+      crypto.scryptSync(this.encryptionKey, this.scryptSalt, 32),
       iv,
     );
-
-    // 평문 암호화
     let encrypted = cipher.update(plaintext, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-
-    // IV + 암호화된 데이터를 함께 반환
     return iv.toString('hex') + ':' + encrypted;
   }
 
   /**
-   * 암호화된 텍스트를 복호화
+   * 암호문 복호화
    * @param encryptedText
    * @returns
    */
   decrypt(encryptedText: string): string {
-    // IV와 암호화된 데이터 분리
     if (!encryptedText || !encryptedText.includes(':')) return encryptedText;
     const [ivHex, encrypted] = encryptedText.split(':');
     const iv = Buffer.from(ivHex, 'hex');
-
-    // scrypt를 사용한 키 파생 (encrypt와 일관성 유지)
-    const key = crypto.scryptSync(this.encryptionKey, 'salt', 32);
-
-    // IV를 이용해 decipher 생성
+    const key = crypto.scryptSync(this.encryptionKey, this.scryptSalt, 32);
     const decipher = crypto.createDecipheriv(this.algorithm, key, iv);
-
-    // 암호화된 데이터 복호화
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
-
     return decrypted;
+  }
+
+  /**
+   * Blind Index 생성: HMAC-SHA256 + 글로벌 페퍼
+   * - 검색 가능성을 유지하면서 레인보우 테이블 방어
+   * - 행별 랜덤 솔트 대신 글로벌 페퍼로 보안 강화 (패턴 분석 방지)
+   * @param data
+   * @returns HMAC 해시 (hex)
+   */
+  generateBlindIndex(data: string): string {
+    // 글로벌 페퍼 + 데이터 조합으로 HMAC 생성
+    // 검색 키와 페퍼를 분리하여 키 노출 시에도 패턴 유추 어려움
+    const combined = this.globalPepper + data;
+    return crypto
+      .createHmac(this.hmacAlgorithm, this.searchKey)
+      .update(combined)
+      .digest('hex');
+  }
+
+  /**
+   * 부분 해시 생성
+   * - 전체 해시보다 유연한 검색 지원
+   * @param data
+   * @param lastDigits
+   * @returns 부분 데이터의 Blind Index
+   */
+  generatePartialBlindIndex(data: string, lastDigits: number): string {
+    const partial = data.slice(-lastDigits);
+    return this.generateBlindIndex(partial);
   }
 }
