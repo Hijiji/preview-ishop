@@ -1,60 +1,89 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InquiryRepository } from '../../mikro-orm/entities/inquiry/inquiry-repository';
 import { EncryptionService } from 'src/common/encryption.service';
 import { InquiryEntity } from '../../mikro-orm/entities/inquiry/inquiry-entity';
+import { ValidationUtils } from 'src/common/validation.util';
 
 @Injectable()
 export class InternalApiService {
+  private readonly logger = new Logger(InternalApiService.name);
+
   constructor(
     private readonly inquiryRepository: InquiryRepository,
     private readonly encryptionService: EncryptionService,
   ) {}
 
   /**
-   * 모든 구매 상담 조회 및 복호화
+   * Blind Index기반 전화번호 검색
+   * @param phoneNumber
+   * @param page
+   * @param limit
    */
-  async getInquiries({}: {}) {
-    const inquiries = await this.inquiryRepository.findAll();
-    return this.decryptInquiries(inquiries);
-  }
+  async getInquiries(
+    phoneNumber: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{
+    data: any[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    const offset = (page - 1) * limit;
 
-  /**
-   * 전화번호로 구매 상담 조회
-   * @param phoneNumber 조회할 전화번호 (하이픈 제거된 형식)
-   */
-  async getInquiriesByPhoneNumber(phoneNumber: string) {
-    const inquiries = await this.inquiryRepository.findAll();
-    const decryptedInquiries = this.decryptInquiries(inquiries);
+    const plainPhone = ValidationUtils.normalizeNumber(phoneNumber);
+    ValidationUtils.validatePhoneNumber(plainPhone);
+    //Blind Index 생
+    const fullHash = this.encryptionService.generateBlindIndex(plainPhone);
 
-    // 전화번호로 필터링
-    return decryptedInquiries.filter(
-      (inquiry) => inquiry.phoneNumber === phoneNumber,
+    // Repository를 통해 Blind Index 검색
+    const inquiries = await this.inquiryRepository.findByBlindIndex(
+      fullHash,
+      limit,
+      offset,
     );
+
+    //총 개수 조회
+    const total = await this.inquiryRepository.countByBlindIndex(fullHash);
+
+    //복호화
+    const decryptedData = await this.decryptInquiriesWithRetry(inquiries);
+
+    return {
+      data: decryptedData,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   /**
-   * 조회한 문의 데이터를 복호화합니다
-   * @param inquiries 암호화된 문의 데이터 배열
+   * 복호화
    */
-  private decryptInquiries(inquiries: InquiryEntity[]): InquiryEntity[] {
+  private async decryptInquiriesWithRetry(
+    inquiries: InquiryEntity[],
+  ): Promise<any[]> {
     return inquiries.map((inquiry) => {
+      const decrypted = { ...inquiry };
       try {
-        // 전화번호 복호화
-        inquiry.phoneNumber = this.encryptionService.decrypt(
-          inquiry.phoneNumber,
-        );
-
-        // 사업자번호 복호화
-        if (inquiry.businessNumber) {
-          inquiry.businessNumber = this.encryptionService.decrypt(
-            inquiry.businessNumber,
+        if (inquiry.encryptedPhoneNumber) {
+          decrypted['phoneNumber'] = this.encryptionService.decrypt(
+            inquiry.encryptedPhoneNumber,
+          );
+        }
+        if (inquiry.encryptedBusinessNumber) {
+          decrypted['businessNumber'] = this.encryptionService.decrypt(
+            inquiry.encryptedBusinessNumber,
           );
         }
       } catch (error) {
-        // 복호화 실패 시 로그 출력 (필요시 예외 처리)
-        console.error('Decryption failed for inquiry:', error);
+        this.logger.error(
+          `Decryption failed for inquiry ID: ${inquiry.id}`,
+          error.stack,
+        );
       }
-      return inquiry;
+
+      return decrypted;
     });
   }
 }
