@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InquiryRepository } from '../../mikro-orm/entities/inquiry/inquiry-repository';
 import { CreateInquiryDto } from './dto/create-inquiry.dto';
 import { InquiryEntity } from 'src/mikro-orm/entities/inquiry/inquiry-entity';
@@ -11,8 +11,23 @@ export class PublicApiService {
     private readonly encryptionService: EncryptionService,
   ) {}
 
-  removeHyphens(usersNum: String): string {
-    return usersNum.replace(/-/g, '');
+  normalizeNumber(value: string): string {
+    return value.replace(/[\s()-]/g, '');
+  }
+
+  private validatePhoneNumber(phoneNumber: string): void {
+    const mobilePattern = /^01[016789]\d{7,8}$/;
+    const areaPattern = /^(02\d{7,8}|0[3-9]\d{7,8})$/;
+
+    if (!mobilePattern.test(phoneNumber) && !areaPattern.test(phoneNumber)) {
+      throw new BadRequestException('올바른 전화번호 형식이 아닙니다.');
+    }
+  }
+
+  private validateBusinessNumber(businessNumber: string): void {
+    if (!/^[0-9]{10}$/.test(businessNumber)) {
+      throw new BadRequestException('올바른 사업자번호 형식이 아닙니다.');
+    }
   }
 
   /**
@@ -23,15 +38,20 @@ export class PublicApiService {
    * @returns
    */
   async createInquiry(createInquiryDto: CreateInquiryDto) {
+    const plainPhone = this.normalizeNumber(createInquiryDto.phoneNumber);
+    this.validatePhoneNumber(plainPhone);
+
     const inquiryEntity = new InquiryEntity();
     inquiryEntity.industry = createInquiryDto.industry;
-    inquiryEntity.phoneNumber = this.encryptionService.encrypt(
-      createInquiryDto.phoneNumber,
-    );
+    inquiryEntity.phoneNumber = this.encryptionService.encrypt(plainPhone);
+
     if (createInquiryDto.businessNumber) {
-      inquiryEntity.businessNumber = this.encryptionService.encrypt(
+      const plainBusiness = this.normalizeNumber(
         createInquiryDto.businessNumber,
       );
+      this.validateBusinessNumber(plainBusiness);
+      inquiryEntity.businessNumber =
+        this.encryptionService.encrypt(plainBusiness);
     }
 
     return await this.inquiryRepository.create(inquiryEntity);
