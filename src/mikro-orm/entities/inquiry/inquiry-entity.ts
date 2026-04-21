@@ -1,4 +1,4 @@
-import { Entity, Enum, PrimaryKey } from '@mikro-orm/core';
+import { Entity, PrimaryKey, Index } from '@mikro-orm/core';
 import { IndustryType } from 'src/enums/industry-type.enum';
 import { Column, CreateDateColumn } from 'typeorm';
 
@@ -9,28 +9,42 @@ export class InquiryEntity {
 
   @Column({
     type: 'varchar',
-    length: 30, // Enum 값 중 가장 긴 것보다 넉넉하게 설정
+    length: 30,
     comment: '업종',
     nullable: false,
   })
   industry: IndustryType;
 
   @Column({
-    name: 'phoneNumber',
-    length: 20,
-    comment: '전화번호',
+    name: 'encryptedPhoneNumber',
+    type: 'varchar',
+    length: 100,
+    comment: '암호화된 전화번호',
     nullable: false,
   })
-  phoneNumber: string;
+  encryptedPhoneNumber: string;
 
+  // Blind Index: 전체 번호 HMAC 해시 (정확한 일치 검색용)
+  @Index()
   @Column({
-    name: 'businessNumber',
-    length: 20,
-    comment: '사업자번호',
-    nullable: true,
+    name: 'phoneFullHash',
+    type: 'varchar',
+    length: 64, // SHA256 hex
+    comment: '전화번호 전체 Blind Index (HMAC-SHA256)',
+    nullable: false,
   })
-  businessNumber?: string;
+  phoneFullHash: string;
 
   @CreateDateColumn({ name: 'createdAt', comment: '생성일', nullable: false })
   createdAt: Date;
+
+  // 암호화된 사업자번호
+  @Column({
+    name: 'encryptedBusinessNumber',
+    type: 'varchar',
+    length: 100,
+    comment: '암호화된 사업자번호',
+    nullable: true,
+  })
+  encryptedBusinessNumber?: string;
 }
