@@ -3,6 +3,7 @@ import { InquiryRepository } from '../../mikro-orm/entities/inquiry/inquiry-repo
 import { CreateInquiryDto } from './dto/create-inquiry.dto';
 import { InquiryEntity } from 'src/mikro-orm/entities/inquiry/inquiry-entity';
 import { EncryptionService } from 'src/common/encryption.service';
+import { ValidationUtils } from 'src/common/validation.util';
 
 @Injectable()
 export class PublicApiService {
@@ -11,46 +12,35 @@ export class PublicApiService {
     private readonly encryptionService: EncryptionService,
   ) {}
 
-  normalizeNumber(value: string): string {
-    return value.replace(/[\s()-]/g, '');
-  }
-
-  private validatePhoneNumber(phoneNumber: string): void {
-    const mobilePattern = /^01[016789]\d{7,8}$/;
-    const areaPattern = /^(02\d{7,8}|0[3-9]\d{7,8})$/;
-
-    if (!mobilePattern.test(phoneNumber) && !areaPattern.test(phoneNumber)) {
-      throw new BadRequestException('올바른 전화번호 형식이 아닙니다.');
-    }
-  }
-
-  private validateBusinessNumber(businessNumber: string): void {
-    if (!/^[0-9]{10}$/.test(businessNumber)) {
-      throw new BadRequestException('올바른 사업자번호 형식이 아닙니다.');
-    }
-  }
-
   /**
    * 사용자 문의 등록
    * @param createInquiryDto
    * @returns
    */
   async createInquiry(createInquiryDto: CreateInquiryDto) {
-    // 전화번호에서 하이픈 제거 및 유효성 검사
-    const plainPhone = this.normalizeNumber(createInquiryDto.phoneNumber);
-    this.validatePhoneNumber(plainPhone);
+    //전화번호에서 하이픈 제거 및 유효성 검사
+    const plainPhone = ValidationUtils.normalizeNumber(
+      createInquiryDto.phoneNumber,
+    );
+    ValidationUtils.validatePhoneNumber(plainPhone);
 
     const inquiryEntity = new InquiryEntity();
     inquiryEntity.industry = createInquiryDto.industry;
-    inquiryEntity.phoneNumber = this.encryptionService.encrypt(plainPhone);
 
-    // 사업자번호가 있는 경우 하이픈 제거 및 유효성 검사
+    //암호화된 전화번호 저장
+    inquiryEntity.encryptedPhoneNumber =
+      this.encryptionService.encrypt(plainPhone);
+    //검색용 Blind Index 생성
+    inquiryEntity.phoneFullHash =
+      this.encryptionService.generateBlindIndex(plainPhone);
+
+    //사업자번호가 있는 경우 하이픈제거, 유효성검사, 암호화
     if (createInquiryDto.businessNumber) {
-      const plainBusiness = this.normalizeNumber(
+      const plainBusiness = ValidationUtils.normalizeNumber(
         createInquiryDto.businessNumber,
       );
-      this.validateBusinessNumber(plainBusiness);
-      inquiryEntity.businessNumber =
+      ValidationUtils.validateBusinessNumber(plainBusiness);
+      inquiryEntity.encryptedBusinessNumber =
         this.encryptionService.encrypt(plainBusiness);
     }
 

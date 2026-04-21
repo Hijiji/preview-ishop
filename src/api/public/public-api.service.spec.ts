@@ -24,6 +24,11 @@ describe('PublicApiService', () => {
           provide: EncryptionService,
           useValue: {
             encrypt: jest.fn((value: string) => `encrypted:${value}`),
+            generateBlindIndex: jest.fn((value: string) => `blind:${value}`),
+            generatePartialBlindIndex: jest.fn(
+              (value: string, digits: number) =>
+                `partial:${value.slice(-digits)}`,
+            ),
           },
         },
       ],
@@ -48,8 +53,12 @@ describe('PublicApiService', () => {
     expect(inquiryRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         industry: dto.industry,
-        phoneNumber: 'encrypted:01012345678',
-        businessNumber: 'encrypted:1234567890',
+        encryptedPhoneNumber: 'encrypted:01012345678',
+        encryptedBusinessNumber: 'encrypted:1234567890',
+        phoneFullHash: 'blind:01012345678',
+        phoneLastFourHash: 'partial:5678',
+        phonePrefix: '010',
+        businessFullHash: 'blind:1234567890',
       }),
     );
   });

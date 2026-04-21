@@ -3,7 +3,6 @@ import {
   IsNotEmpty,
   Matches,
   IsOptional,
-  IsEmpty,
   IsEnum,
   IsPhoneNumber,
 } from 'class-validator';
@@ -21,13 +20,13 @@ export class CreateInquiryDto {
   @ApiProperty({ description: '전화번호', example: '010-1234-5678' })
   @IsString()
   @IsNotEmpty()
-  @IsPhoneNumber('KR', { message: '유효한 대한민국 전화번호가 아닙니다.' })
+  @IsPhoneNumber('KR', { message: '유효한 전화번호 형식이 아닙니다.' })
   phoneNumber: string;
 
   @ApiProperty({ description: '사업자번호', example: '123-45-67890' })
   @IsString()
   @IsOptional()
-  @Matches(/^\d{3}-\d{2}-\d{5}$/, {
+  @Matches(/^\d{3}-?\d{2}-?\d{5}$/, {
     message: '올바른 사업자번호 형식이 아닙니다.',
   })
   businessNumber: string;
