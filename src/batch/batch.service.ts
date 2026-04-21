@@ -1,10 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { StoreRepository } from '../mikro-orm/entities/store/store-repository';
 import { EncryptionService } from '../common/encryption.service';
 import { SlackService } from '../common/slack.service';
+import { WinstonLogger } from '../common/winston-logger';
 import { firstValueFrom } from 'rxjs';
 
 interface BusinessStatusResponse {
@@ -20,7 +21,7 @@ interface BusinessStatusResponse {
 
 @Injectable()
 export class BatchService {
-  private readonly logger = new Logger(BatchService.name);
+  private readonly logger = new WinstonLogger(BatchService.name);
   private isRunning = false;
   private readonly BATCH_SIZE = 100; // API 최대 100건
   private readonly API_URL =
@@ -35,6 +36,7 @@ export class BatchService {
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  //@Cron(CronExpression.EVERY_10_SECONDS)
   async handleBusinessStatusUpdate() {
     if (this.isRunning) {
       this.logger.warn(
@@ -152,12 +154,11 @@ export class BatchService {
     const payload = {
       b_no: businessNumbers,
     };
-
     const response = await firstValueFrom(
-      this.httpService.post(this.API_URL, payload, {
+      this.httpService.post(`${this.API_URL}?serviceKey=${apiKey}`, payload, {
         headers: {
-          Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
+          Accept: 'application/json',
         },
       }),
     );

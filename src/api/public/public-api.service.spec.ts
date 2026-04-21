@@ -56,8 +56,6 @@ describe('PublicApiService', () => {
         encryptedPhoneNumber: 'encrypted:01012345678',
         encryptedBusinessNumber: 'encrypted:1234567890',
         phoneFullHash: 'blind:01012345678',
-        phoneLastFourHash: 'partial:5678',
-        phonePrefix: '010',
         businessFullHash: 'blind:1234567890',
       }),
     );

@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { WinstonLogger } from '../../common/winston-logger';
 import { InquiryRepository } from '../../mikro-orm/entities/inquiry/inquiry-repository';
 import { EncryptionService } from 'src/common/encryption.service';
 import { InquiryEntity } from '../../mikro-orm/entities/inquiry/inquiry-entity';
@@ -6,7 +7,7 @@ import { ValidationUtils } from 'src/common/validation.util';
 
 @Injectable()
 export class InternalApiService {
-  private readonly logger = new Logger(InternalApiService.name);
+  private readonly logger = new WinstonLogger(InternalApiService.name);
 
   constructor(
     private readonly inquiryRepository: InquiryRepository,
@@ -64,7 +65,12 @@ export class InternalApiService {
     inquiries: InquiryEntity[],
   ): Promise<any[]> {
     return inquiries.map((inquiry) => {
-      const decrypted = { ...inquiry };
+      const decrypted = {
+        id: inquiry.id,
+        industry: inquiry.industry,
+        createdAt: inquiry.createdAt,
+      };
+
       try {
         if (inquiry.encryptedPhoneNumber) {
           decrypted['phoneNumber'] = this.encryptionService.decrypt(
@@ -81,6 +87,14 @@ export class InternalApiService {
           `Decryption failed for inquiry ID: ${inquiry.id}`,
           error.stack,
         );
+        // 복호화 실패 시 원본 암호화 데이터를 유지
+        if (inquiry.encryptedPhoneNumber) {
+          decrypted['encryptedPhoneNumber'] = inquiry.encryptedPhoneNumber;
+        }
+        if (inquiry.encryptedBusinessNumber) {
+          decrypted['encryptedBusinessNumber'] =
+            inquiry.encryptedBusinessNumber;
+        }
       }
 
       return decrypted;

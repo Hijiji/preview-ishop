@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { WinstonLogger } from './winston-logger';
 import * as crypto from 'crypto';
 
 @Injectable()
 export class EncryptionService {
+  private readonly logger = new WinstonLogger(EncryptionService.name);
   private readonly encryptionKey: string;
   private readonly searchKey: string; // 검색용 HMAC 키 (암호화 키와 분리)
   private readonly globalPepper: string; // 글로벌 페퍼: 레인보우 테이블 방어 + 검색 가능성 유지
@@ -20,7 +22,9 @@ export class EncryptionService {
       'ENCRYPTION_ALGORITHM',
       'aes-256-cbc',
     );
-    const ivLength = this.configService.get<number>('ENCRYPTION_IV_LENGTH', 16);
+    const ivLength = Number(
+      this.configService.get<number>('ENCRYPTION_IV_LENGTH', 16),
+    );
     const scryptSalt = this.configService.get<string>(
       'ENCRYPTION_SCRYPT_SALT',
       'salt',
@@ -36,11 +40,27 @@ export class EncryptionService {
       );
     }
     if (!searchKey || searchKey.length < 32) {
+      this.logger.error(
+        'Invalid search key configuration',
+        'EncryptionService',
+        {
+          keyLength: searchKey?.length,
+          requiredLength: 32,
+        },
+      );
       throw new Error(
         'INVALID_SEARCH_KEY: 검색 키는 최소 32바이트여야 합니다.',
       );
     }
     if (!pepper || pepper.length < 16) {
+      this.logger.error(
+        'Invalid global pepper configuration',
+        'EncryptionService',
+        {
+          pepperLength: pepper?.length,
+          requiredLength: 16,
+        },
+      );
       throw new Error(
         'INVALID_PEPPER: 글로벌 페퍼는 최소 16바이트여야 합니다.',
       );
