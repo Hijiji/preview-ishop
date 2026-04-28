@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { InternalApiService } from './internal-api.service';
 import { InquiryRepository } from '../../mikro-orm/entities/inquiry/inquiry-repository';
-import { EncryptionService } from 'src/common/encryption.service';
+import { EncryptionService } from 'src/common/services/encryption.service';
+import { WinstonLogger } from '../../common/winston-logger';
 import { InquiryEntity } from '../../mikro-orm/entities/inquiry/inquiry-entity';
 import { IndustryType } from 'src/enums/industry-type.enum';
 
@@ -9,6 +10,7 @@ describe('InternalApiService', () => {
   let service: InternalApiService;
   let inquiryRepository: InquiryRepository;
   let encryptionService: EncryptionService;
+  let logger: WinstonLogger;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -28,12 +30,19 @@ describe('InternalApiService', () => {
             decrypt: jest.fn(),
           },
         },
+        {
+          provide: WinstonLogger,
+          useValue: {
+            error: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<InternalApiService>(InternalApiService);
     inquiryRepository = module.get<InquiryRepository>(InquiryRepository);
     encryptionService = module.get<EncryptionService>(EncryptionService);
+    logger = module.get<WinstonLogger>(WinstonLogger);
   });
 
   it('should be defined', () => {

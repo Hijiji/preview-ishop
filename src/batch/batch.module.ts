@@ -4,8 +4,8 @@ import { StoreRepositoryModule } from '../mikro-orm/entities/store/store-reposit
 import { ScheduleModule } from '@nestjs/schedule';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
-import { EncryptionService } from '../common/encryption.service';
-import { SlackService } from '../common/slack.service';
+import { EncryptionService } from '../common/services/encryption.service';
+import { SlackService } from '../common/services/slack.service';
 
 @Module({
   imports: [

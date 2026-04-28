@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { WinstonLogger } from './winston-logger';
+import { WinstonLogger } from '../winston-logger';
 import * as crypto from 'crypto';
 
 @Injectable()

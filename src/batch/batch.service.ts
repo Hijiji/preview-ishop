@@ -2,11 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
+import { Transactional } from '@mikro-orm/core';
 import { StoreRepository } from '../mikro-orm/entities/store/store-repository';
-import { EncryptionService } from '../common/encryption.service';
-import { SlackService } from '../common/slack.service';
+import { EncryptionService } from '../common/services/encryption.service';
+import { SlackService } from '../common/services/slack.service';
 import { WinstonLogger } from '../common/winston-logger';
 import { firstValueFrom } from 'rxjs';
+import { EntityManager } from '@mikro-orm/sqlite';
 
 interface BusinessStatusResponse {
   request_cnt: number;
@@ -15,7 +17,6 @@ interface BusinessStatusResponse {
     b_no: string; // 사업자등록번호
     b_stt: string; // 사업자 상태 (01: 계속사업자, 02: 휴업자, 03: 폐업자)
     tax_type: string; // 과세유형
-    // 기타 필드들...
   }>;
 }
 
@@ -33,10 +34,11 @@ export class BatchService {
     private readonly configService: ConfigService,
     private readonly encryptionService: EncryptionService,
     private readonly slackService: SlackService,
+    private readonly em: EntityManager,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  //@Cron(CronExpression.EVERY_10_SECONDS)
+  //@Cron(CronExpression.EVERY_10_SECONDS) // 테스트용
   async handleBusinessStatusUpdate() {
     if (this.isRunning) {
       this.logger.warn(
@@ -171,6 +173,7 @@ export class BatchService {
    * @param response
    * @param requestData
    */
+  @Transactional()
   private async processApiResponse(
     response: BusinessStatusResponse,
     requestData: Array<{ id: number; businessNumber: string }>,
@@ -183,7 +186,7 @@ export class BatchService {
       );
       if (!requestItem) {
         this.logger.warn(
-          `API 응답에 요청한 사업자번호가 없습니다 - Business Number: ${item.b_no}`,
+          `사업자번호가 없습니다 - Business Number: ${item.b_no}`,
         );
         continue;
       }
@@ -198,7 +201,7 @@ export class BatchService {
 
       // 폐업 상태인 경우 슬랙 알림
       if (item.b_stt === '03') {
-        await this.slackService.notifyBusinessClosure(
+        await this.slackService.sendClosedStoreNotification(
           requestItem.id,
           item.b_no,
         );

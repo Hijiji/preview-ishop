@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { WinstonLogger } from '../../common/winston-logger';
 import { InquiryRepository } from '../../mikro-orm/entities/inquiry/inquiry-repository';
-import { EncryptionService } from 'src/common/encryption.service';
+import { EncryptionService } from 'src/common/services/encryption.service';
 import { InquiryEntity } from '../../mikro-orm/entities/inquiry/inquiry-entity';
-import { ValidationUtils } from 'src/common/validation.util';
+import { ValidationUtils } from 'src/common/utils/validation.util';
 
 @Injectable()
 export class InternalApiService {

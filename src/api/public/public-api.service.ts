@@ -1,15 +1,18 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { Transactional } from '@mikro-orm/core';
 import { InquiryRepository } from '../../mikro-orm/entities/inquiry/inquiry-repository';
 import { CreateInquiryDto } from './dto/create-inquiry.dto';
 import { InquiryEntity } from 'src/mikro-orm/entities/inquiry/inquiry-entity';
-import { EncryptionService } from 'src/common/encryption.service';
-import { ValidationUtils } from 'src/common/validation.util';
+import { EncryptionService } from 'src/common/services/encryption.service';
+import { ValidationUtils } from 'src/common/utils/validation.util';
+import { EntityManager } from '@mikro-orm/sqlite';
 
 @Injectable()
 export class PublicApiService {
   constructor(
     private readonly inquiryRepository: InquiryRepository,
     private readonly encryptionService: EncryptionService,
+    private readonly em: EntityManager,
   ) {}
 
   /**
@@ -17,6 +20,7 @@ export class PublicApiService {
    * @param createInquiryDto
    * @returns
    */
+  @Transactional()
   async createInquiry(createInquiryDto: CreateInquiryDto) {
     //전화번호에서 하이픈 제거 및 유효성 검사
     const plainPhone = ValidationUtils.normalizeNumber(
